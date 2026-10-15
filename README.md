@@ -1,5 +1,7 @@
 # Clinical Telemetry Fault Injector & DSP Parity Framework
 
+![Telemetry Recovery Demo](assets/eeg_recovery_demo.png)
+
 An open-source Software Development Engineer in Test (SDET) verification framework designed to validate the resilience of clinical neurodiagnostic and patient-monitoring telemetry pipelines under degraded hospital network conditions.
 
 ---
