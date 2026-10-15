@@ -1,3 +1,17 @@
+"""
+Clinical Telemetry Visual Evidence Generator
+============================================
+PURPOSE FOR TECHNICAL EXHIBITS & DOCUMENTATION:
+Non-technical reviewers, clinical stakeholders, and regulatory auditors need immediate
+visual confirmation of how the fault-injection and DSP recovery pipeline behaves.
+
+This script generates a high-resolution, 3-panel clinical comparison chart
+(saved to assets/eeg_recovery_demo.png) illustrating:
+1. The healthy 256 Hz synthetic patient EEG baseline.
+2. The corrupted hospital Wi-Fi stream (with pink-shaded packet dropouts and 25V spikes).
+3. The reconstructed clinical waveform overlaid directly against the original baseline.
+"""
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,28 +28,29 @@ except ImportError:
 
 def generate_clinical_recovery_chart(output_path="assets/eeg_recovery_demo.png"):
     """
-    Generates a 3-panel visual comparison of the synthetic EEG signal,
-    the corrupted hospital Wi-Fi telemetry stream, and the DSP-recovered output.
+    Executes a deterministic fault-injection simulation and exports a 3-panel
+    visual comparison chart for documentation and audit exhibits.
     """
+    # Lock the random seed so the visual exhibit is 100% reproducible
     np.random.seed(42)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # 1. Generate 2 seconds of 256 Hz EEG data
+    # 1. Generate 2 seconds of clean 256 Hz EEG data (10 Hz Alpha rhythm)
     time_data, clean_signal = generate_eeg_signal(duration_seconds=2, sample_rate=256)
 
-    # 2. Inject packet loss (NaN gaps) and hardware voltage spikes
+    # 2. Corrupt the signal with 15% Wi-Fi packet loss (NaN gaps) and 25V hardware spikes
     corrupted_signal = inject_packet_loss(clean_signal, drop_rate=0.15, packet_size=16)
     corrupted_signal = inject_anomalous_spikes(
         corrupted_signal, spike_probability=0.015, spike_magnitude=25.0
     )
 
-    # 3. Recover the signal through the clinical DSP pipeline
+    # 3. Repair the corrupted stream through the clinical DSP pipeline
     recovered_signal = process_telemetry_stream(
         corrupted_signal, max_voltage=5.0, smoothing_window=5
     )
     rmse = np.sqrt(np.mean((clean_signal - recovered_signal) ** 2))
 
-    # 4. Plot the 3-panel figure
+    # 4. Build the 3-panel publication-grade figure
     fig, axes = plt.subplots(3, 1, figsize=(11, 7), sharex=True)
     fig.suptitle(
         "Clinical Telemetry Fault Injection & Automated DSP Parity Verification (256 Hz)",
@@ -43,7 +58,7 @@ def generate_clinical_recovery_chart(output_path="assets/eeg_recovery_demo.png")
         fontweight="bold",
     )
 
-    # Panel 1: Clean Baseline
+    # Panel 1: Clean Patient Baseline
     axes[0].plot(time_data, clean_signal, color="#1f77b4", linewidth=1.2)
     axes[0].set_title(
         "1. Baseline Synthetic Patient EEG (10 Hz Alpha Wave + Baseline Noise)",
@@ -54,11 +69,17 @@ def generate_clinical_recovery_chart(output_path="assets/eeg_recovery_demo.png")
     axes[0].set_ylim(-2.5, 2.5)
     axes[0].grid(True, linestyle="--", alpha=0.5)
 
-    # Panel 2: Corrupted Stream (Highlight dropped packets in red shading)
+    # Panel 2: Degraded Hospital Stream (Highlight dropped Wi-Fi packets in shaded bands)
     axes[1].plot(time_data, corrupted_signal, color="#d62728", linewidth=1.2)
     nan_mask = np.isnan(corrupted_signal)
     axes[1].fill_between(
-        time_data, -30, 30, where=nan_mask, color="#ff9896", alpha=0.4, label="Dropped Wi-Fi Packets (NaN)"
+        time_data,
+        -30,
+        30,
+        where=nan_mask,
+        color="#ff9896",
+        alpha=0.4,
+        label="Dropped Wi-Fi Packets (NaN)",
     )
     axes[1].set_title(
         "2. Degraded Hospital Telemetry Stream (Wi-Fi Packet Loss + Hardware Voltage Spikes)",
@@ -70,12 +91,21 @@ def generate_clinical_recovery_chart(output_path="assets/eeg_recovery_demo.png")
     axes[1].legend(loc="upper right", fontsize=8)
     axes[1].grid(True, linestyle="--", alpha=0.5)
 
-    # Panel 3: Recovered Signal vs Baseline
+    # Panel 3: Reconstructed Output vs Original Baseline
     axes[2].plot(
-        time_data, clean_signal, color="#aec7e8", linewidth=1.0, linestyle="--", label="Original Baseline"
+        time_data,
+        clean_signal,
+        color="#aec7e8",
+        linewidth=1.0,
+        linestyle="--",
+        label="Original Baseline",
     )
     axes[2].plot(
-        time_data, recovered_signal, color="#2ca02c", linewidth=1.4, label=f"DSP Reconstructed (RMSE: {rmse:.3f})"
+        time_data,
+        recovered_signal,
+        color="#2ca02c",
+        linewidth=1.4,
+        label=f"DSP Reconstructed (RMSE: {rmse:.3f})",
     )
     axes[2].set_title(
         "3. DSP-Reconstructed Telemetry Output (100% Dropouts Interpolated & Spikes Clamped)",
